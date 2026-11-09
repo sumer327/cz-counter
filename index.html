@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<style>[hidden]{display:none!important}body{margin:0}</style>
+<title>Counter Appraisal</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: two panes — left builds the device (category → model → storage → carrier → condition),
+   right is a sticky "offer slip" with the offer line. Stacks to one column on phones. */
+:root{
+  --bg:#e8eeec; --panel:#ffffff; --ink:#14201d; --muted:#5d6b67; --line:#d5dcda; --chip:#f4f7f6;
+  --accent:#0b7a5c; --accent-ink:#ffffff; --accent-soft:#dcefe8;
+  --good:#0b7a5c; --warn:#b26b00; --warn-soft:#fbefd9; --bad:#b3261e; --bad-soft:#f8dedb;
+  --zone-go:#bfe3d4; --zone-push:#f3d9a6; --zone-no:#f0c2bd;
+  --t1:#0a8a55; --t2:#3aae5f; --t3:#9bbf2f; --t4:#e39a0b; --over:#d8473b;
+  --ref-swappa:#4f6fd8; --ref-atlas:#9a5cd0; --ref-retail:#d9762b; --ref-whole:#7b8682;
+  --head:#10302a; --head-ink:#e9f6f1;
+  --display:"Archivo",ui-sans-serif,system-ui,sans-serif;
+  --body:"Archivo",ui-sans-serif,system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1514; --panel:#172120; --ink:#e4ece9; --muted:#93a39e; --line:#2a3735; --chip:#1d2927;
+  --accent:#3fc59a; --accent-ink:#06261c; --accent-soft:#163a30;
+  --good:#3fc59a; --warn:#e8a93a; --warn-soft:#3a2c12; --bad:#f07a70; --bad-soft:#3d1c19;
+  --zone-go:#1f4a3c; --zone-push:#4a3a17; --zone-no:#4d2421;
+  --t1:#2fd08a; --t2:#68cf7a; --t3:#c4dd55; --t4:#f5b53a; --over:#ff7a6c;
+  --ref-swappa:#8aa2ff; --ref-atlas:#c39af0; --ref-retail:#f4a160; --ref-whole:#a5b0ac;
+  --head:#0b241f; --head-ink:#e9f6f1; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1514; --panel:#172120; --ink:#e4ece9; --muted:#93a39e; --line:#2a3735; --chip:#1d2927;
+  --accent:#3fc59a; --accent-ink:#06261c; --accent-soft:#163a30;
+  --good:#3fc59a; --warn:#e8a93a; --warn-soft:#3a2c12; --bad:#f07a70; --bad-soft:#3d1c19;
+  --zone-go:#1f4a3c; --zone-push:#4a3a17; --zone-no:#4d2421;
+  --t1:#2fd08a; --t2:#68cf7a; --t3:#c4dd55; --t4:#f5b53a; --over:#ff7a6c;
+  --ref-swappa:#8aa2ff; --ref-atlas:#c39af0; --ref-retail:#f4a160; --ref-whole:#a5b0ac;
+  --head:#0b241f; --head-ink:#e9f6f1; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--body);font-size:15px;line-height:1.4}
+.wrap{max-width:1280px;margin:0 auto;padding-block:16px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px;margin-bottom:16px;background:var(--head);color:var(--head-ink);border-radius:12px;padding:14px 18px}
+header.top h1{font-family:var(--display);font-stretch:118%;font-weight:800;font-size:24px;letter-spacing:-.01em;margin:0}
+header.top h1 span{color:var(--t2)}
+header.top .fresh{color:var(--head-ink);opacity:.8}
+header.top .fresh b{color:var(--head-ink)}
+.fresh{font-size:12.5px;color:var(--muted)}
+.fresh b{color:var(--ink);font-weight:600}
+.grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.pane{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.steps{padding:6px 18px 18px}
+.step{padding:14px 0;border-bottom:1px dashed var(--line)}
+.step:last-child{border-bottom:0}
+.step h2{font-family:var(--display);font-stretch:110%;font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;display:flex;gap:8px;align-items:center}
+.step h2 .num{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:11px;letter-spacing:0}
+.step.off{opacity:.45;pointer-events:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{appearance:none;border:1px solid var(--line);background:var(--chip);color:var(--ink);font:inherit;font-weight:600;padding:9px 13px;border-radius:8px;cursor:pointer;text-align:left;line-height:1.2}
+.chip small{display:block;font-weight:400;color:var(--muted);font-size:12px;margin-top:2px}
+.chip:hover{border-color:var(--accent)}
+.chip:focus-visible,.cond:focus-visible,input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);box-shadow:0 1px 0 rgba(0,0,0,.08)}
+.chip[aria-pressed="true"] small{color:inherit;opacity:.75}
+.chip:disabled{opacity:.4;cursor:not-allowed}
+.cat{font-family:var(--display);font-stretch:105%;font-size:15px;padding:11px 15px}
+.search{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--chip);color:var(--ink);margin-bottom:10px}
+.models{display:flex;flex-wrap:wrap;gap:6px;max-height:230px;overflow:auto;padding:2px}
+.models .chip{padding:7px 11px;font-weight:500}
+.conds{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.cond{appearance:none;font:inherit;text-align:left;border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:8px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.cond .l{font-weight:600}
+.cond .d{font-size:12px;color:var(--muted)}
+.cond .p{font-family:var(--mono);font-weight:600;font-size:15px;margin-top:4px}
+.cond[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.deduct{display:grid;gap:8px;margin-top:12px}
+.check{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--chip);cursor:pointer}
+.check input{margin-top:3px;accent-color:var(--accent)}
+.check .amt{margin-left:auto;font-family:var(--mono);font-weight:600;color:var(--bad)}
+.field{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.field label{font-weight:600}
+.field .hint{font-size:12px;color:var(--muted);flex-basis:100%}
+.money{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;background:var(--chip);padding:0 10px}
+.money span{color:var(--muted);font-family:var(--mono)}
+.money input{border:0;background:transparent;color:var(--ink);font:600 15px var(--mono);width:84px;padding:9px 6px}
+.sheetnote{font-size:12.5px;color:var(--muted);background:var(--chip);border-radius:8px;padding:9px 12px;margin-top:10px}
+.sheetnote b{color:var(--ink)}
+
+/* offer slip */
+.slip{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);padding:18px}
+@media (max-width:900px){.slip{position:static}}
+.slip .empty{color:var(--muted);padding:30px 6px;text-align:center}
+.slip .empty b{display:block;color:var(--ink);font-family:var(--display);font-stretch:110%;font-size:18px;margin-bottom:6px}
+.dev{font-family:var(--display);font-stretch:110%;font-weight:800;font-size:20px;line-height:1.2;text-wrap:balance}
+.devsub{color:var(--muted);font-size:13px;margin-top:2px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tag{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--chip);color:var(--muted);border:1px solid var(--line)}
+.tag.hot{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tag.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.tag.bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.tiers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:16px 0 6px}
+.tier{border-radius:10px;padding:10px 10px 11px;background:var(--chip);border-top:5px solid var(--tc);min-width:0}
+.tier .k{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--tc)}
+.tier .v{font-family:var(--display);font-stretch:108%;font-weight:800;font-size:clamp(20px,2.4vw,30px);line-height:1.1;font-variant-numeric:tabular-nums;margin-top:2px}
+.tier .s{font-size:11.5px;color:var(--muted)}
+.tier.max{background:var(--ink);color:var(--panel);border-top-color:var(--t4)}
+.tier.max .s{color:inherit;opacity:.75}
+@media (max-width:480px){.tiers{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.alert{border-radius:8px;padding:10px 12px;font-size:13.5px;margin-top:10px}
+.alert.warn{background:var(--warn-soft);color:var(--warn)}
+.alert.bad{background:var(--bad-soft);color:var(--bad)}
+.alert b{font-weight:700}
+.math{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.6}
+.math .neg{color:var(--bad)}
+.scale{margin-top:18px}
+.scale h3,.facts h3,.msg h3{font-family:var(--display);font-stretch:110%;font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.lineH{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.lineH small{font-size:12px;color:var(--muted)}
+.oline{position:relative;height:74px;margin:6px 14px 0}
+.oline .track{position:absolute;left:0;right:0;top:34px;height:10px;border-radius:5px;display:flex;overflow:hidden}
+.oline .track i{display:block;height:100%}
+.stop{position:absolute;top:0;transform:translateX(-50%);text-align:center;width:76px}
+.stop .nm{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--tc);white-space:nowrap}
+.stop .dot{width:18px;height:18px;border-radius:50%;background:var(--tc);border:3px solid var(--panel);box-shadow:0 0 0 1px var(--tc);margin:6px auto 0}
+.stop .vl{font-family:var(--mono);font-weight:700;font-size:13.5px;margin-top:4px;font-variant-numeric:tabular-nums}
+.mline{position:relative;height:64px;margin:8px 14px 0}
+.mline .track{position:absolute;left:0;right:0;top:27px;height:8px;border-radius:4px;display:flex;overflow:hidden}
+.mline .track i{display:block;height:100%}
+.mk{position:absolute;transform:translateX(-50%);text-align:center;white-space:nowrap}
+.mk .pin{width:3px;height:18px;background:var(--mc);margin:0 auto;border-radius:2px}
+.mk .vl{font-family:var(--mono);font-weight:700;font-size:12.5px;color:var(--mc);font-variant-numeric:tabular-nums}
+.mk.up{top:0}.mk.up .pin{margin-top:2px}
+.mk.dn{top:22px}.mk.dn .vl{margin-top:2px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:4px;font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.legend b{color:var(--ink);font-family:var(--mono);font-weight:600}
+.facts{margin-top:16px}
+.facts dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:13.5px}
+.facts dt{color:var(--muted)}
+.facts dd{margin:0;font-family:var(--mono);font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
+.stock{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+.stock div{background:var(--chip);border-radius:8px;padding:8px;text-align:center}
+.stock b{display:block;font-family:var(--display);font-stretch:110%;font-size:22px;font-variant-numeric:tabular-nums}
+.stock span{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.05em}
+.stocknote{font-size:12.5px;color:var(--muted);margin-top:6px}
+.msg{margin-top:16px}
+.msg pre{white-space:pre-wrap;font-family:var(--body);font-size:13.5px;background:var(--chip);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0 0 8px;user-select:all}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{appearance:none;border:1px solid var(--ink);background:var(--ink);color:var(--panel);font:inherit;font-weight:700;padding:9px 14px;border-radius:8px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.ok{font-size:13px;color:var(--good);font-weight:600}
+.checklist{margin:14px 0 0;padding:10px 12px;border-radius:8px;border:1px dashed var(--line);font-size:13px;color:var(--muted)}
+.checklist b{color:var(--ink)}
+/* swappa appraisal */
+.sw-grid{display:grid;gap:12px}
+textarea{width:100%;min-height:110px;font:13px var(--mono);padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--chip);color:var(--ink);resize:vertical}
+.how{font-size:13px;color:var(--muted);margin:0;padding-left:18px}
+.how li{margin:2px 0}
+.inline-in{font:inherit;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--chip);color:var(--ink);width:100%}
+.prices{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.prices span{font-family:var(--mono);font-size:12.5px;padding:3px 7px;border-radius:5px;background:var(--chip);border:1px solid var(--line)}
+.prices span.in{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+@media (prefers-reduced-motion:no-preference){.bar i{transition:flex-basis .25s ease}}
+.gate{position:fixed;inset:0;z-index:50;background:var(--bg);display:grid;place-items:center;padding:16px}
+.gate-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:28px 24px;width:min(380px,100%);display:grid;gap:12px}
+.gate-card h1{font-family:var(--display);font-stretch:118%;font-weight:800;font-size:24px;margin:0}
+.gate-card h1 span{color:var(--accent)}
+.gate-card p{margin:0;color:var(--muted)}
+.gate-card input{font:16px var(--mono);padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--chip);color:var(--ink)}
+.gate-msg{min-height:1.2em;color:var(--bad);font-size:13px}
+</style>
+</head>
+<body>
+
+
+<div class="gate" id="gate" hidden>
+  <form class="gate-card" id="gateForm">
+    <h1>Counter <span>Appraisal</span></h1>
+    <p>Cellular Zone staff only. Enter the store passcode.</p>
+    <input id="gatePw" type="password" autocomplete="current-password" placeholder="Store passcode" aria-label="Store passcode">
+    <button class="btn" type="submit">Unlock</button>
+    <div class="gate-msg" id="gateMsg" role="status"></div>
+  </form>
+</div>
+<div class="wrap">
+  <header class="top">
+    <h1>Counter <span>Appraisal</span></h1>
+    <div class="row" style="gap:12px"><div class="fresh" id="fresh">Loading prices from the Master Buyback Sheet…</div><button class="btn ghost" id="lockBtn" type="button" style="padding:5px 10px;font-size:12px;color:var(--head-ink);border-color:var(--head-ink)">Lock</button></div>
+  </header>
+
+  <div class="grid">
+    <section class="pane steps" aria-label="Device">
+      <div class="step" id="s-cat">
+        <h2><span class="num">1</span>What are they selling?</h2>
+        <div class="chips" id="cats"></div>
+      </div>
+
+      <div id="sheetFlow">
+        <div class="step off" id="s-model">
+          <h2><span class="num">2</span>Model</h2>
+          <input class="search" id="q" type="search" placeholder="Type to filter, e.g. 14 pro max" autocomplete="off">
+          <div class="models" id="models"></div>
+        </div>
+        <div class="step off" id="s-storage">
+          <h2><span class="num">3</span><span id="storageLabel">Storage</span></h2>
+          <div class="chips" id="storages"></div>
+        </div>
+        <div class="step off" id="s-carrier">
+          <h2><span class="num">4</span><span id="carrierLabel">Carrier &amp; payment status</span></h2>
+          <div class="chips" id="carriers"></div>
+        </div>
+        <div class="step off" id="s-cond">
+          <h2><span class="num">5</span>Condition</h2>
+          <div class="conds" id="conds"></div>
+          <div class="deduct" id="deducts"></div>
+          <div class="sheetnote" id="sheetnote" hidden></div>
+        </div>
+      </div>
+
+      <div id="swFlow" hidden>
+        <div class="step">
+          <h2><span class="num">2</span>Device not on the sheet: live Swappa appraisal</h2>
+          <div class="sw-grid">
+            <input class="inline-in" id="swName" placeholder="Device, storage, carrier (e.g. Razr+ 2025 256GB unlocked)" autocomplete="off">
+            <div>
+              <div class="chips" id="swBox"></div>
+            </div>
+            <ol class="how">
+              <li>Open <b>swappa.com</b>, find the exact model, carrier and storage.</li>
+              <li>Filter condition to <b>Good</b>, sort price <b>low to high</b>.</li>
+              <li>Type the listing prices below (skip our own listings and anything cracked or odd).</li>
+            </ol>
+            <div class="field">
+              <label for="swPrices">Listing prices</label>
+              <input class="inline-in" id="swPrices" placeholder="289 299 305 310 …" autocomplete="off">
+              <span class="hint">Good condition or better. Skip our own listings, cracked or aftermarket-screen listings, and odd outliers.</span>
+            </div>
+            <div class="field">
+              <label for="swSold">Recent sold average</label>
+              <div class="money"><span>$</span><input id="swSold" inputmode="numeric" placeholder="optional"></div>
+              <span class="hint">From Swappa's recent sales. We list at whichever is lower, the listings band or the sold average.</span>
+            </div>
+            <div class="prices" id="swChips"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="pane slip" id="slip" aria-live="polite">
+      <div class="empty"><b>Pick a device</b>Max buy, opening offer, Atlas, Swappa, retail and stock show up here.</div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(() => {
+const LOCS = "1. i10/Dezavala Area: 6565 Babcock Rd, 78249   2. 1604/Bulverde Area: 17910 Bulverde Rd, 78259   3. 151/Potranco Area: 9230 Potranco Rd, 78251  ";
+const CATS = [
+  {id:"iphone", label:"iPhone"}, {id:"samsung", label:"Samsung"}, {id:"ipad", label:"iPad"},
+  {id:"watch", label:"Apple Watch"}, {id:"pixel", label:"Pixel"}, {id:"console", label:"Console / handheld"},
+  {id:"surface", label:"Surface Pro"}, {id:"mac", label:"MacBook / iMac"}, {id:"other", label:"Something else", sub:"not on the sheet"}
+];
+const CAP55 = 0.55;          // Samsung flagships + all iPads: max buy capped at 55% of Swappa list
+const BATTERY = 35;          // battery health under 80%
+const TIERS = [              // offer line: % under max buy
+  {k:"Home run", off:.25, c:"var(--t1)"}, {k:"Strong", off:.15, c:"var(--t2)"},
+  {k:"Start", off:.10, c:"var(--t3)"}, {k:"Max", off:0, c:"var(--t4)"}];
+const S = {cat:null, model:null, storage:null, opt:null, cond:null, back:false, battery:false, faceid:false, parts:0, box:"phone"};
+let D = null;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const num = v => typeof v === "number" ? v : null;
+const usd = v => v == null ? "—" : "$" + Math.round(v).toLocaleString("en-US");
+const floor5 = v => Math.floor(v / 5) * 5;
+const ceil5 = v => Math.ceil(v / 5) * 5;
+const store = {get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+
+/* ---------- data ---------- */
+const PASS_KEY = "cz-pass";
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function unlock(pw){
+  const enc = await (await fetch("data.enc.json", {cache: "no-store"})).json();
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey({name: "PBKDF2", salt: b64(enc.salt), iterations: enc.iter, hash: "SHA-256"}, base, {name: "AES-GCM", length: 256}, false, ["decrypt"]);
+  const plain = await crypto.subtle.decrypt({name: "AES-GCM", iv: b64(enc.iv)}, key, b64(enc.ct));
+  let bytes = plain;
+  if (enc.gz) bytes = await new Response(new Blob([plain]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+function start(d){
+  D = d;
+  D.rows.forEach(r => { r.key = r.model.toUpperCase(); r.note = r.n != null ? D.notes[r.n] : ""; });
+  const shortDate = t => { const m = /(\w{3} \w{3} \d+, \d{4}(?: \d+:\d+ [AP]M)?)/.exec(t || ""); return m ? m[1] : null; };
+  const ip = shortDate(D.updated["iphone-paid"]);
+  $("fresh").innerHTML = `Prices from the Master Buyback Sheet${ip ? ` · iPhones updated <b>${esc(ip)}</b>` : ""} · tool synced ${esc(D.built)}`;
+  drawCats();
+  const last = store.get("ca-cat");
+  if (last && CATS.some(c => c.id === last)) pickCat(last);
+}
+async function tryUnlock(pw, fromForm){
+  const msg = $("gateMsg");
+  if (fromForm) msg.textContent = "Checking…";
+  try {
+    const d = await unlock(pw);
+    store.set(PASS_KEY, pw); $("gate").hidden = true; start(d);
+  } catch (e) {
+    try { localStorage.removeItem(PASS_KEY); } catch (_) {}
+    $("gate").hidden = false;
+    msg.textContent = fromForm ? (e && e.name === "OperationError" ? "Wrong passcode. Ask Sam for the current one." : "Couldn't load prices. Check the internet and try again.") : "";
+    $("gatePw").focus();
+  }
+}
+$("gateForm").addEventListener("submit", e => { e.preventDefault(); const v = $("gatePw").value.trim(); if (v) tryUnlock(v, true); });
+$("lockBtn").addEventListener("click", () => { try { localStorage.removeItem(PASS_KEY); } catch (_) {} location.reload(); });
+{ const saved = store.get(PASS_KEY); if (saved) tryUnlock(saved, false); else { $("gate").hidden = false; $("gatePw").focus(); } }
+
+/* ---------- step builders ---------- */
+function chip(label, sub, pressed, onClick, disabled){
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "chip"; b.setAttribute("aria-pressed", pressed ? "true" : "false");
+  b.innerHTML = esc(label) + (sub ? `<small>${esc(sub)}</small>` : "");
+  if (disabled) b.disabled = true;
+  b.onclick = onClick; return b;
+}
+function drawCats(){
+  const el = $("cats"); el.innerHTML = "";
+  CATS.forEach(c => { const b = chip(c.label, c.sub, S.cat === c.id, () => pickCat(c.id)); b.classList.add("cat"); el.append(b); });
+}
+function pickCat(id){
+  Object.assign(S, {cat:id, model:null, storage:null, opt:null, cond:null, back:false, battery:false, faceid:false, parts:0});
+  store.set("ca-cat", id);
+  drawCats();
+  const other = id === "other";
+  $("sheetFlow").hidden = other; $("swFlow").hidden = !other;
+  if (other){ drawSwappa(); return; }
+  $("q").value = "";
+  drawModels(); drawRest();
+  $("q").focus({preventScroll:true});
+}
+function modelsFor(cat){
+  const seen = []; D.rows.forEach(r => { if (r.cat === cat && !seen.includes(r.model)) seen.push(r.model); });
+  return cat === "mac" ? seen : seen.reverse();   // newest first (Mac tab is already newest-first, grouped Air / Pro / iMac)
+}
+function drawModels(){
+  const q = $("q").value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const el = $("models"); el.innerHTML = "";
+  modelsFor(S.cat).filter(m => q.every(w => m.toLowerCase().includes(w))).forEach(m => {
+    el.append(chip(m, "", S.model === m, () => { Object.assign(S, {model:m, storage:null, opt:null, cond:null, back:false, battery:false, faceid:false}); drawModels(); autoPick(); drawRest(); }));
+  });
+  if (!el.children.length) el.innerHTML = `<span class="fresh">No match on the sheet. Try fewer words, or use “Something else” for a live Swappa appraisal.</span>`;
+  $("s-model").classList.remove("off");
+}
+$("q").addEventListener("input", drawModels);
+$("q").addEventListener("keydown", e => { if (e.key === "Enter"){ const b = $("models").querySelector("button"); if (b) b.click(); }});
+
+const modelRows = () => D.rows.filter(r => r.cat === S.cat && r.model === S.model);
+
+/* carrier / status options per category */
+function options(){
+  const rows = modelRows(), has = (c, t) => rows.some(r => r.carrier === c && (!t || r.track === t));
+  const o = [];
+  if (["iphone","samsung","pixel"].includes(S.cat)){
+    if (has("Unlocked")) o.push({id:"unl", label:"Unlocked", find:r => r.carrier === "Unlocked"});
+    if (has("ATT")) o.push({id:"att", label:"AT&T · paid off", find:r => r.carrier === "ATT"});
+    if (has("OTHER")) o.push({id:"oth", label:"Verizon / T-Mobile / Cricket · paid off", find:r => r.carrier === "OTHER"});
+    if (has("ATT Financed")) o.push({id:"attfin", label:"AT&T · still financed", sub:"sells in store", find:r => r.carrier === "ATT Financed"});
+    if (has("Carrier Locked")) o.push({id:"fin", label:"Financed or any other carrier", sub:"Boost, Spectrum, Total, Metro, unpaid", find:r => r.carrier === "Carrier Locked"});
+    else o.push({id:"fin", label:"Financed or any other carrier", sub:"not on the sheet: ask Sam", find:() => false, none:true});
+    return {label:"Carrier & payment status", opts:o};
+  }
+  if (S.cat === "ipad"){
+    const one = has("WIFI / CELLULAR");
+    if (one) return {label:"Connectivity", opts:[{id:"any", label:"Wi-Fi or Cellular", find:r => r.carrier === "WIFI / CELLULAR"}]};
+    if (has("WIFI")) o.push({id:"wifi", label:"Wi-Fi", find:r => r.carrier === "WIFI"});
+    if (has("CELLULAR")) o.push({id:"cell", label:"Cellular · unlocked", find:r => r.carrier === "CELLULAR"});
+    if (has("WIFI")) o.push({id:"locked", label:"Cellular · carrier-locked or financed", sub:"pay the Wi-Fi price or less", find:r => r.carrier === "WIFI"});
+    return {label:"Connectivity", opts:o};
+  }
+  if (S.cat === "mac"){ const v = [...new Set(rows.map(r => r.carrier))]; return {label:"Memory (RAM) - About This Mac › Memory", opts:v.map(x => ({id:x, label:x, find:r => r.carrier === x}))}; }
+  const lab = {watch:"Connectivity", console:"Edition", surface:"Processor"}[S.cat] || "Version";
+  const vals = [...new Set(rows.map(r => r.carrier))];
+  return {label:lab, opts:vals.map(v => ({id:v, label:v === "-" ? "Standard" : tidy(v), find:r => r.carrier === v}))};
+}
+const tidy = v => v.length <= 4 ? v : v.split(" ").map(w => /\d/.test(w) || w.length <= 2 ? w : w[0] + w.slice(1).toLowerCase()).join(" ").replace("Gps / Cell","GPS or Cellular");
+function storages(){ return [...new Set(modelRows().map(r => r.storage))]; }
+function autoPick(){
+  const st = storages(); if (st.length === 1) S.storage = st[0];
+  const op = options().opts.filter(x => !x.none); if (op.length === 1) S.opt = op[0].id;
+}
+function currentRow(){
+  if (!S.model || !S.storage || !S.opt) return null;
+  const o = options().opts.find(x => x.id === S.opt); if (!o) return null;
+  return modelRows().find(r => r.storage === S.storage && o.find(r)) || null;
+}
+function drawRest(){
+  const hasModel = !!S.model;
+  ["s-storage","s-carrier","s-cond"].forEach(id => $(id).classList.toggle("off", !hasModel));
+  // storage
+  const sl = {watch:"Case size", console:"Storage", surface:"Storage"}[S.cat] || "Storage";
+  $("storageLabel").textContent = sl;
+  const se = $("storages"); se.innerHTML = "";
+  if (hasModel) storages().forEach(s => se.append(chip(s === "-" ? "Standard" : s, "", S.storage === s, () => { S.storage = s; drawRest(); })));
+  // carrier
+  const op = hasModel ? options() : {label:"Carrier & payment status", opts:[]};
+  $("carrierLabel").textContent = op.label;
+  const ce = $("carriers"); ce.innerHTML = "";
+  op.opts.forEach(o => {
+    const avail = o.none ? true : !S.storage || modelRows().some(r => r.storage === S.storage && o.find(r));
+    ce.append(chip(o.label, o.sub, S.opt === o.id, () => { S.opt = o.id; drawRest(); }, !avail));
+  });
+  drawConds();
+  drawSlip();
+}
+
+/* ---------- condition ---------- */
+const COND = [
+  {k:"new", l:"New / sealed", d:"Unopened, or open box never used"},
+  {k:"mint", l:"Mint", d:"No visible wear"},
+  {k:"used", l:"Good", d:"Normal light wear"},
+  {k:"heavy", l:"Heavy wear", d:"Deep scratches, dents"},
+  {k:"glass", l:"Cracked screen", d:"Works, glass broken"},
+  {k:"hdmi", l:"Bad HDMI port", d:"No video out"},
+  {k:"damaged", l:"Damaged", d:"Lines, no display, dead spots"}
+];
+function drawConds(){
+  const el = $("conds"), de = $("deducts"), nt = $("sheetnote");
+  el.innerHTML = ""; de.innerHTML = ""; nt.hidden = true;
+  const r = currentRow();
+  if (!r){
+    const o = S.opt && options().opts.find(x => x.id === S.opt);
+    if (o && o.none) el.innerHTML = `<div class="alert warn"><b>No financed price for ${esc(S.model)}.</b> The sheet only has Atlas pricing for iPhone and Samsung. Ask Sam before quoting.</div>`;
+    return;
+  }
+  COND.forEach(c => {
+    if (!(c.k in r)) return;
+    let d = c.d, cl = c.l;
+    if (c.k === "glass" && r.backInGlass) d = "Cracked screen or cracked back";
+    if (c.k === "glass" && S.cat === "watch") d = "Works, glass or display broken";
+    if (c.k === "damaged" && S.cat === "iphone") d = "No Face ID, lines, no display";
+    if (S.cat === "mac" && c.k === "glass") { cl = "Cracked / lines on screen"; d = "Display damaged, otherwise works"; }
+    if (S.cat === "mac" && c.k === "damaged") d = "No power / liquid / keyboard dead";
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "cond"; b.setAttribute("aria-pressed", S.cond === c.k ? "true" : "false");
+    const v = r[c.k];
+    b.innerHTML = `<span class="l">${esc(cl)}</span><span class="d">${esc(d)}</span><span class="p">${typeof v === "number" ? usd(v) : esc(v)}</span>`;
+    b.onclick = () => { S.cond = c.k; drawConds(); drawSlip(); };
+    el.append(b);
+  });
+  // deductions
+  if (S.cat === "iphone" && r.backGlass && !r.backInGlass && !["damaged","glass"].includes(S.cond)){
+    de.append(check("back", `Back glass cracked`, `−${usd(r.backGlass)}`, S.back, v => { S.back = v; drawSlip(); }));
+  }
+  if (["iphone","samsung","pixel","ipad","watch","mac"].includes(S.cat) && !["damaged"].includes(S.cond)){
+    de.append(check("battery", "Battery health under 80%", `−${usd(BATTERY)}`, S.battery, v => { S.battery = v; drawSlip(); }));
+  }
+  if (S.cat === "iphone"){
+    de.append(check("faceid", "Face ID doesn't work", "pays the damaged price", S.faceid, v => { S.faceid = v; drawSlip(); }));
+  }
+  const hint = {
+    console:"Missing controller? Put the controller cost here. Other repairs: the part cost.",
+    iphone:"Bad charging port, camera, speaker: put the part cost here.",
+    samsung:"Cracked back, charging port: put the part cost here.",
+    watch:"Missing charger or band: put the cost here.",
+  }[S.cat] || "Any repair it needs: put the part cost here.";
+  const f = document.createElement("div"); f.className = "field";
+  f.innerHTML = `<label for="parts">Other repairs, part cost</label><div class="money"><span>−$</span><input id="parts" inputmode="numeric" value="${S.parts || ""}" placeholder="0"></div><span class="hint">${esc(hint)}</span>`;
+  de.append(f);
+  f.querySelector("input").addEventListener("input", e => { S.parts = Math.max(0, parseFloat(e.target.value.replace(/[^\d.]/g,"")) || 0); drawSlip(); });
+  if (r.note){ nt.hidden = false; nt.innerHTML = `<b>${S.cat === "mac" ? "Match it on the Mac:" : "Sheet note:"}</b> ${esc(r.note.replace(/\s*---\s*/g, " · "))}`; }
+}
+function check(id, label, amt, on, cb){
+  const l = document.createElement("label"); l.className = "check";
+  l.innerHTML = `<input type="checkbox" id="${id}" ${on ? "checked" : ""}><span>${esc(label)}</span><span class="amt">${esc(amt)}</span>`;
+  l.querySelector("input").addEventListener("change", e => cb(e.target.checked));
+  return l;
+}
+
+/* ---------- the offer ---------- */
+function swappaFor(r){
+  if (num(r.swappa)) return {v:r.swappa, src:"Swappa list"};
+  if (num(r.swappaAvg)) return {v:r.swappaAvg, src:"Swappa avg"};
+  // ATT / OTHER rows on Samsung/Pixel/iPad carry no Swappa price: use the unlocked row's as a reference
+  const u = D.rows.find(x => x.cat === r.cat && x.model === r.model && x.storage === r.storage && num(x.swappa) && x.track === "paid");
+  if (u) return {v:u.swappa, src:"Swappa list (unlocked)"};
+  return null;
+}
+function capApplies(r){
+  if (r.track !== "paid") return false;
+  if (r.cat === "ipad") return true;
+  return r.cat === "samsung" && /ultra|fold|flip|note/i.test(r.model);
+}
+function hotInfo(r){
+  if (r.cat !== "iphone") return null;
+  const k = r.key, byModel = D.stockByModel[k]; if (!byModel) return null;
+  return {model:byModel, line:D.stock[k + "|" + r.storage] || null};
+}
+function compute(r){
+  const out = {lines:[], alerts:[]};
+  let cond = S.cond || "used";
+  if (S.faceid && "damaged" in r) cond = "damaged";
+  let base = r[cond];
+  out.cond = cond;
+  if (typeof base !== "number"){ out.text = base || "No price"; return out; }
+  out.lines.push([COND.find(c => c.k === cond).l + (S.faceid && cond === "damaged" ? " (no Face ID)" : ""), base]);
+  let max = base;
+  if (S.back && r.backGlass && !["damaged","glass"].includes(cond)){ max -= r.backGlass; out.lines.push(["Back glass", -r.backGlass]); }
+  if (S.battery && cond !== "damaged"){ max -= BATTERY; out.lines.push(["Battery <80%", -BATTERY]); }
+  if (S.parts){ max -= S.parts; out.lines.push(["Part cost", -S.parts]); }
+  const sw = swappaFor(r);
+  if (capApplies(r) && sw && ["new","mint","used","heavy"].includes(cond)){
+    const cap = floor5(sw.v * CAP55);
+    if (max > cap){
+      out.alerts.push(["warn", `<b>55% cap applied.</b> ${r.cat === "ipad" ? "iPads" : "Samsung flagships"} lose value fast, so we pay no more than 55% of the Swappa list (${usd(sw.v)}). The sheet's number was ${usd(max)}.`]);
+      out.lines.push(["55% cap", cap - max]); max = cap;
+    }
+  }
+  max = Math.max(0, max);
+  out.max = max;
+  out.start = max >= 20 ? Math.min(max, ceil5(max * 0.9)) : max;
+  out.swappa = sw;
+  return out;
+}
+function drawSlip(){
+  const el = $("slip");
+  const r = currentRow();
+  if (!r) return emptySlip();
+  const o = compute(r);
+  const hot = hotInfo(r);
+  const optLabel = (options().opts.find(x => x.id === S.opt) || {}).label || "";
+  const tags = [];
+  if (hot) tags.push(`<span class="tag hot">Hot list</span>`);
+  if (r.track === "financed") tags.push(`<span class="tag warn">Financed · sells to Atlas</span>`);
+  if (/LOW VALUE/.test(r.note || "") || /LOW VALUE/i.test(r.notes || "")) tags.push(`<span class="tag warn">Low value · sell in store</span>`);
+  if (/THIN MARKET/i.test(r.note || "") || /thin/i.test(r.notes || "")) tags.push(`<span class="tag">Thin market${r.cat === "mac" && num(r.used) > 1000 ? " · text Sam first" : ""}</span>`);
+  if (/sell local/i.test(r.notes || "")) tags.push(`<span class="tag warn">Oversized · sell local first</span>`);
+  if (S.opt === "locked") tags.push(`<span class="tag warn">Locked iPad · Wi-Fi price</span>`);
+
+  let h = `<div class="dev">${esc(r.model)} · ${esc(r.storage === "-" ? "" : r.storage)}</div>
+    <div class="devsub">${esc(optLabel)}${S.cond ? "" : " · showing Good condition until you pick one"}</div>
+    <div class="tags">${tags.join("")}</div>`;
+
+  if (o.max == null){
+    h += `<div class="alert bad"><b>${esc(o.text)}.</b> ${/PASS/i.test(o.text) ? "We don't buy this one in that condition." : "The sheet has no number here. Ask Sam before quoting."}</div>`;
+    el.innerHTML = h + facts(r, o, hot); return;
+  }
+  h += tierCards(o.max);
+  if (o.lines.length > 1) h += `<div class="math">${o.lines.map(([k,v]) => `${esc(k)} <span class="${v < 0 ? "neg" : ""}">${v < 0 ? "−" + usd(-v) : usd(v)}</span>`).join(" · ")} = <b>${usd(o.max)}</b></div>`;
+  o.alerts.forEach(([t, m]) => h += `<div class="alert ${t}">${m}</div>`);
+  if (o.max === 0) h += `<div class="alert bad"><b>Deductions wipe out the value.</b> Offer a few dollars for parts or pass.</div>`;
+  h += scale(r, o) + facts(r, o, hot) + message(o.max) + checklist(r);
+  el.innerHTML = h;
+  wireCopy(o.max);
+}
+function emptySlip(){
+  $("slip").innerHTML = `<div class="empty"><b>${S.model ? "Finish the details" : "Pick a device"}</b>${S.model ? "Choose storage and carrier to see the offer." : "Max buy, opening offer, Atlas, Swappa, retail and stock show up here."}</div>`;
+}
+function tierVals(max){
+  return TIERS.map(t => ({...t, v: t.off ? Math.min(max, ceil5(max * (1 - t.off))) : max}));
+}
+function tierCards(max){
+  const sub = {"Home run":"25% under max","Strong":"15% under max","Start":"10% under: open here","Max":"never go above"};
+  return `<div class="tiers">${tierVals(max).map(t => `<div class="tier${t.off ? "" : " max"}" style="--tc:${t.c}"><div class="k">${esc(t.k)}</div><div class="v">${usd(t.v)}</div><div class="s">${sub[t.k]}</div></div>`).join("")}</div>`;
+}
+function scale(r, o){
+  const T = tierVals(o.max);
+  // offer line: stops spaced by their % under max (home run left, max right)
+  const lo = T[0].v, span = Math.max(1, o.max - lo);
+  const at = v => o.max === lo ? 50 : (v - lo) / span * 100;
+  let off = `<div class="oline" role="img" aria-label="Offer line from home run to max">
+    <div class="track">${T.slice(0, -1).map((t, i) => `<i style="flex-basis:${at(T[i+1].v) - at(t.v)}%;background:${t.c}"></i>`).join("")}</div>
+    ${T.map(t => `<div class="stop" style="left:${at(t.v)}%;--tc:${t.c}"><div class="nm">${esc(t.k)}</div><div class="dot"></div><div class="vl">${usd(t.v)}</div></div>`).join("")}</div>`;
+  // market line: where max buy sits against what the device is worth
+  const ref = [{k:"Max buy", v:o.max, c:"var(--t4)"}];
+  if (o.swappa) ref.push({k:o.swappa.src, v:o.swappa.v, c:"var(--ref-swappa)"});
+  if (num(r.atlas)) ref.push({k:"Atlas Grade B" + (r.track === "financed" ? " (our exit)" : ""), v:r.atlas, c:"var(--ref-atlas)"});
+  if (num(r.retail)) ref.push({k:"Our retail", v:r.retail, c:"var(--ref-retail)"});
+  if (num(r.wholesale)) ref.push({k:"Wholesale", v:r.wholesale, c:"var(--ref-whole)"});
+  let mk = "";
+  if (ref.length > 1){
+    const top = Math.max(...ref.map(p => p.v)) * 1.06, pct = v => Math.max(2, Math.min(98, v / top * 100));
+    const sorted = [...ref].sort((a,b) => a.v - b.v);
+    let lastUp = -99, lastDn = -99;
+    const pins = sorted.map(p => { const x = pct(p.v); let up = x - lastUp >= 13 || x - lastDn < 13; if (up) lastUp = x; else lastDn = x;
+      return `<div class="mk ${up ? "up" : "dn"}" style="left:${x}%;--mc:${p.c}" title="${esc(p.k)}">${up ? `<div class="vl">${usd(p.v)}</div><div class="pin"></div>` : `<div class="pin"></div><div class="vl">${usd(p.v)}</div>`}</div>`; }).join("");
+    mk = `<div class="lineH" style="margin-top:14px"><h3>What it's worth</h3><small>where max sits vs. the market</small></div>
+      <div class="mline" role="img" aria-label="Max buy compared with Swappa, Atlas and retail">
+        <div class="track"><i style="flex-basis:${pct(o.max)}%;background:var(--zone-go)"></i><i style="flex:1;background:var(--zone-no)"></i></div>${pins}</div>
+      <div class="legend">${[...ref].sort((a,b) => b.v - a.v).map(p => `<span><i style="background:${p.c}"></i>${esc(p.k)} <b>${usd(p.v)}</b></span>`).join("")}</div>`;
+  }
+  return `<div class="scale"><div class="lineH"><h3>Offer line</h3><small>start low, move right only if you must</small></div>${off}${mk}</div>`;
+}
+function facts(r, o, hot){
+  const rows = [];
+  if (num(r.atlasNew)) rows.push(["Atlas new (sealed)", usd(r.atlasNew)]);
+  if (num(r.atlasOpen)) rows.push(["Atlas new (open box)", usd(r.atlasOpen)]);
+  if (typeof r.atlas === "string") rows.push(["Atlas", esc(r.atlas)]);
+  if (r.notes) rows.push(["Sheet note", esc(r.notes)]);
+  let h = rows.length ? `<div class="facts"><h3>More data</h3><dl>${rows.map(([k,v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl></div>` : "";
+  h += `<div class="facts"><h3>In stock</h3>`;
+  if (hot){
+    const L = hot.line || {dz:0, bv:0, pt:0, total:0};
+    h += `<div class="stock"><div><b>${L.dz}</b><span>DZ</span></div><div><b>${L.bv}</b><span>BV</span></div><div><b>${L.pt}</b><span>PT</span></div><div><b>${L.total}</b><span>TOTAL</span></div></div>
+      <div class="stocknote">This storage size. All ${esc(r.model)} sizes: ${hot.model.total} on hand, want ${esc(hot.model.desired)} · ${esc(hot.model.vs)}${L.sold2wk ? ` · sold ~${esc(L.sold2wk)} in 2 weeks` : ""}.</div>`;
+  } else {
+    h += `<div class="stocknote">${r.cat === "mac" ? "Mac stock isn't tracked in this tool. Check the store inventory sheet." : "Counts are tracked for hot-list iPhones only. For anything else, check the store inventory sheet."}</div>`;
+  }
+  return h + `</div>`;
+}
+function message(amount){
+  const txt = `We pay up to $${amount} on that.\n\n${LOCS}\n\nCan you swing by one of our 3 locations today? Open till 8`;
+  return `<div class="msg"><h3>Customer message</h3><pre id="msgText">${esc(txt)}</pre>
+    <div class="row"><button class="btn" id="copyMsg" type="button">Copy message</button><span class="ok" id="copied"></span></div></div>`;
+}
+function wireCopy(){
+  const b = $("copyMsg"); if (!b) return;
+  b.onclick = async () => {
+    const t = $("msgText").textContent;
+    try { await navigator.clipboard.writeText(t); $("copied").textContent = "Copied"; }
+    catch(e){ const rg = document.createRange(); rg.selectNodeContents($("msgText")); const s = getSelection(); s.removeAllRanges(); s.addRange(rg); $("copied").textContent = "Selected: press Ctrl+C"; }
+  };
+}
+function checklist(r){
+  const items = {
+    iphone:"Find My off · Apple ID signed out · IMEI clean (not blacklisted) · financed status confirmed",
+    samsung:"Google + Samsung account removed · IMEI clean · financed status confirmed",
+    pixel:"Google account removed · IMEI clean · paid off",
+    ipad:"Find My off · Apple ID signed out · not MDM / school managed",
+    watch:"Activation Lock off (unpaired from their iPhone)",
+    console:"Signed out / factory reset · power cable + 1 controller (charger for handhelds)",
+    surface:"Microsoft account and BitLocker removed · check CPU/RAM in Settings › System › About",
+    mac:"Find My / Activation Lock off · no company or school MDM profile · battery cycle count (System Report › Power) · charger included"
+  }[r.cat];
+  return items ? `<div class="checklist"><b>Before you pay:</b> ${esc(items)}</div>` : "";
+}
+
+/* ---------- Something else: live Swappa appraisal ---------- */
+const BOX = [
+  {id:"phone", label:"Phone", sub:"small box", ship:v => v > 675 ? 27 : 11},
+  {id:"watch", label:"Watch", sub:"small box", ship:v => v > 675 ? 27 : 11},
+  {id:"hand", label:"Handheld", sub:"Switch, Steam Deck", ship:() => 15},
+  {id:"tab", label:"Tablet / laptop / console", sub:"medium box", ship:v => v > 675 ? 33 : 18},
+];
+const SW = {listings:[], sold:null};
+function drawSwappa(){
+  const el = $("swBox"); el.innerHTML = "";
+  BOX.forEach(b => el.append(chip(b.label, b.sub, S.box === b.id, () => { S.box = b.id; drawSwappa(); })));
+  swCompute();
+}
+function parsePrices(s){ return (s.match(/\d[\d,]*(?:\.\d+)?/g) || []).map(x => Math.round(parseFloat(x.replace(/,/g,"")))).filter(v => v >= 10 && v <= 5000); }
+$("swPrices").addEventListener("input", () => { SW.listings = parsePrices($("swPrices").value).sort((a,b) => a - b); swCompute(); });
+$("swSold").addEventListener("input", () => { SW.sold = parseFloat($("swSold").value.replace(/[^\d.]/g,"")) || null; swCompute(); });
+$("swName").addEventListener("input", swCompute);
+
+function swCompute(){
+  const L = SW.listings, n = L.length;
+  const chipsEl = $("swChips"); chipsEl.innerHTML = "";
+  let band = null, used = [];
+  if (n){
+    if (n < 20) used = [0, 1].filter(i => i < n);
+    else if (n < 40) used = [0, 1, 2, 3];
+    else used = [4, 5, 6, 7];
+    band = used.reduce((a, i) => a + L[i], 0) / used.length;
+    L.forEach((v, i) => { const s = document.createElement("span"); s.textContent = "$" + v; if (used.includes(i)) s.className = "in"; chipsEl.append(s); });
+  }
+  let list = null, how = "";
+  if (band != null && SW.sold) { list = Math.min(band, SW.sold); how = list === SW.sold ? "sold average (lower than listings)" : `listing band (${n < 20 ? "2 cheapest" : n < 40 ? "ranks 1–4" : "ranks 5–8"})`; }
+  else if (band != null){ list = band; how = `listing band (${n < 20 ? "2 cheapest" : n < 40 ? "ranks 1–4" : "ranks 5–8"})`; }
+  else if (SW.sold){ list = SW.sold * 0.95; how = "sold average × 0.95 (no clean listings)"; }
+  const el = $("slip");
+  if (list == null){ el.innerHTML = `<div class="empty"><b>Live Swappa appraisal</b>Type the Swappa listing prices to get a max buy.</div>`; return; }
+  const box = BOX.find(b => b.id === S.box);
+  const ship = box.ship(list);
+  const profit = list <= 200 ? 60 : 100;
+  const net = list * 0.884375;
+  let max = floor5(net - ship - profit);
+  const name = $("swName").value.trim() || "Device";
+  const flagship = /ipad|ultra|fold|flip|note/i.test(name);
+  const alerts = [];
+  if (flagship){ const cap = floor5(list * CAP55); if (max > cap){ alerts.push(`<b>55% cap applied.</b> iPads and Samsung flagships top out at 55% of the Swappa price. Uncapped max was ${usd(max)}.`); max = cap; } }
+  const low = max <= 0;
+  max = Math.max(0, max);
+  const start = max >= 20 ? Math.min(max, ceil5(max * 0.9)) : max;
+  let h = `<div class="dev">${esc(name)}</div><div class="devsub">Live Swappa appraisal · ${n} listings${SW.sold ? ` · sold avg ${usd(SW.sold)}` : ""}</div>
+    <div class="tags"><span class="tag">Not on the sheet</span>${n && n < 5 ? `<span class="tag">Thin market</span>` : ""}${low ? `<span class="tag bad">Low value</span>` : ""}</div>`;
+  if (low){
+    h += `<div class="alert bad"><b>Can't make the ${usd(profit)} minimum on Swappa.</b> Only buy cheap to sell in store, and run it by Sam.</div>`;
+  } else {
+    h += tierCards(max);
+  }
+  h += `<div class="math">Swappa price ${usd(list)} (${esc(how)}) × 0.884375 fees = ${usd(net)} − ${usd(ship)} shipping − ${usd(profit)} profit = <b>${usd(Math.max(0, floor5(net - ship - profit)))}</b></div>`;
+  alerts.forEach(a => h += `<div class="alert warn">${a}</div>`);
+  if (!low){
+    h += scale({}, {max, start, swappa:{v:list, src:"Swappa price"}});
+    h += message(max);
+  }
+  h += `<div class="checklist"><b>Before you pay:</b> account removed / Find My off · IMEI clean · paid off · test screen, buttons, charging. Thin market or over $500? Text Sam the numbers first.</div>`;
+  el.innerHTML = h;
+  wireCopy();
+}
+})();
+</script>
+
+</body>
+</html>
