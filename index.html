@@ -580,7 +580,10 @@ function scale(r, o){
   // market line: where max buy sits against what the device is worth
   const ref = [{k:"Max buy", v:o.max, c:"var(--t4)"}];
   if (o.swappa) ref.push({k:o.swappa.src, v:o.swappa.v, c:"var(--ref-swappa)"});
-  if (num(r.atlas)) ref.push({k:"Atlas Grade B" + (r.track === "financed" ? " (our exit)" : ""), v:r.atlas, c:"var(--ref-atlas)"});
+  // Atlas pin matches the condition: New/sealed sells to Atlas as new, everything else as Grade B
+  const exitTag = r.track === "financed" ? " (our exit)" : "";
+  if (o.cond === "new" && num(r.atlasNew)) ref.push({k:"Atlas new sealed" + exitTag, v:r.atlasNew, c:"var(--ref-atlas)"});
+  else if (num(r.atlas)) ref.push({k:"Atlas Grade B" + exitTag, v:r.atlas, c:"var(--ref-atlas)"});
   if (num(r.retail)) ref.push({k:"Our retail", v:r.retail, c:"var(--ref-retail)"});
   if (num(r.wholesale)) ref.push({k:"Wholesale", v:r.wholesale, c:"var(--ref-whole)"});
   let mk = "";
