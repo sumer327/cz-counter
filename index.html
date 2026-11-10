@@ -268,7 +268,9 @@ const CATS = [
   {id:"surface", label:"Surface Pro"}, {id:"mac", label:"MacBook / iMac"}, {id:"other", label:"Something else", sub:"not on the sheet"}
 ];
 const CAP55 = 0.55;          // Samsung flagships + all iPads: max buy capped at 55% of Swappa list
-const BATTERY = 35;          // battery health under 80%
+const BATTERY = 35;          // battery health under 80% (non-iPhone)
+const BATTERY_IPHONE = 30;   // iPhones: $30 across the board (Sam, Nov 10)
+const batt = r => r && r.cat === "iphone" ? BATTERY_IPHONE : BATTERY;
 const TIERS = [              // offer line: % under max buy
   {k:"Home run", off:.25, c:"var(--t1)"}, {k:"Strong", off:.15, c:"var(--t2)"},
   {k:"Start", off:.10, c:"var(--t3)"}, {k:"Max", off:0, c:"var(--t4)"}];
@@ -467,7 +469,8 @@ function drawConds(){
     let d = c.d, cl = c.l;
     if (c.k === "glass" && r.backInGlass) d = "Cracked screen or cracked back";
     if (c.k === "glass" && S.cat === "watch") d = "Works, glass or display broken";
-    if (c.k === "damaged" && S.cat === "iphone") d = "No Face ID, lines, no display";
+    if (c.k === "damaged" && S.cat === "iphone") d = r.track === "paid" ? "No Face ID, won't power on, liquid / board damage" : "No Face ID, lines, no display";
+    if (c.k === "glass" && S.cat === "iphone" && r.track === "paid") { cl = "Cracked screen / bad display"; d = "Glass cracked or lines / dead display. We just replace the screen"; }
     if (S.cat === "mac" && c.k === "glass") { cl = "Cracked / lines on screen"; d = "Display damaged, otherwise works"; }
     if (S.cat === "mac" && c.k === "damaged") d = "No power / liquid / keyboard dead";
     const b = document.createElement("button");
@@ -478,11 +481,11 @@ function drawConds(){
     el.append(b);
   });
   // deductions
-  if (S.cat === "iphone" && r.backGlass && !r.backInGlass && !["damaged","glass"].includes(S.cond)){
+  if (S.cat === "iphone" && r.backGlass && !r.backInGlass && S.cond !== "damaged"){
     de.append(check("back", `Back glass cracked`, `−${usd(r.backGlass)}`, S.back, v => { S.back = v; drawSlip(); }));
   }
   if (["iphone","samsung","pixel","ipad","watch","mac"].includes(S.cat) && !["damaged"].includes(S.cond)){
-    de.append(check("battery", "Battery health under 80%", `−${usd(BATTERY)}`, S.battery, v => { S.battery = v; drawSlip(); }));
+    de.append(check("battery", "Battery health under 80%", `−${usd(batt(r))}`, S.battery, v => { S.battery = v; drawSlip(); }));
   }
   if (S.cat === "iphone"){
     de.append(check("faceid", "Face ID doesn't work", "pays the damaged price", S.faceid, v => { S.faceid = v; drawSlip(); }));
@@ -534,8 +537,8 @@ function compute(r){
   if (typeof base !== "number"){ out.text = base || "No price"; return out; }
   out.lines.push([COND.find(c => c.k === cond).l + (S.faceid && cond === "damaged" ? " (no Face ID)" : ""), base]);
   let max = base;
-  if (S.back && r.backGlass && !["damaged","glass"].includes(cond)){ max -= r.backGlass; out.lines.push(["Back glass", -r.backGlass]); }
-  if (S.battery && cond !== "damaged"){ max -= BATTERY; out.lines.push(["Battery <80%", -BATTERY]); }
+  if (S.back && r.backGlass && cond !== "damaged"){ max -= r.backGlass; out.lines.push(["Back glass", -r.backGlass]); }
+  if (S.battery && cond !== "damaged"){ const b = batt(r); max -= b; out.lines.push(["Battery <80%", -b]); }
   if (S.parts){ max -= S.parts; out.lines.push(["Part cost", -S.parts]); }
   const sw = swappaFor(r);
   if (capApplies(r) && sw && ["new","mint","used","heavy"].includes(cond)){
