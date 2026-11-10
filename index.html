@@ -345,6 +345,29 @@ function pickCat(id){
   drawModels(); drawRest();
   $("q").focus({preventScroll:true});
 }
+/* Apple model numbers (printed on the bottom case: "Model A2337"). Several chips share a case, so some entries list two. */
+const MAC_A = {
+  'MacBook Air 13" Intel (2018)':'A1932', 'MacBook Air 13" Intel (2019)':'A1932', 'MacBook Air 13" Intel (2020)':'A2179',
+  'MacBook Air 13" M1 (2020)':'A2337', 'MacBook Air 13" M2 (2022)':'A2681', 'MacBook Air 13" M3 (2024)':'A3113',
+  'MacBook Air 13" M4 (2025)':'A3240', 'MacBook Air 13" M5 (2026)':'A3449',
+  'MacBook Air 15" M2 (2023)':'A2941', 'MacBook Air 15" M3 (2024)':'A3114', 'MacBook Air 15" M4 (2025)':'A3241', 'MacBook Air 15" M5 (2026)':'A3448',
+  'MacBook Neo (2026)':'A3404',
+  'MacBook Pro 13" Intel (2018)':'A1989', 'MacBook Pro 13" Intel (2019)':'A1989 / A2159', 'MacBook Pro 13" Intel (2020)':'A2251 / A2289',
+  'MacBook Pro 13" M1 (2020)':'A2338', 'MacBook Pro 13" M2 (2022)':'A2338',
+  'MacBook Pro 14" M1 Pro (2021)':'A2442', 'MacBook Pro 14" M1 Max (2021)':'A2442',
+  'MacBook Pro 14" M2 Pro (2023)':'A2779', 'MacBook Pro 14" M2 Max (2023)':'A2779',
+  'MacBook Pro 14" M3 (Late 2023)':'A2918', 'MacBook Pro 14" M3 Pro (Late 2023)':'A2992', 'MacBook Pro 14" M3 Max (Late 2023)':'A2992',
+  'MacBook Pro 14" M4 (2024)':'A3112', 'MacBook Pro 14" M4 Pro (2024)':'A3401', 'MacBook Pro 14" M4 Max (2024)':'A3185',
+  'MacBook Pro 14" M5 (2025)':'A3434',
+  'MacBook Pro 15" Intel (2018)':'A1990', 'MacBook Pro 15" Intel (2019)':'A1990', 'MacBook Pro 16" Intel (2019)':'A2141',
+  'MacBook Pro 16" M1 Pro (2021)':'A2485', 'MacBook Pro 16" M1 Max (2021)':'A2485',
+  'MacBook Pro 16" M2 Pro (2023)':'A2780', 'MacBook Pro 16" M2 Max (2023)':'A2780',
+  'MacBook Pro 16" M3 Pro (Late 2023)':'A2991', 'MacBook Pro 16" M3 Max (Late 2023)':'A2991',
+  'MacBook Pro 16" M4 Pro (2024)':'A3403', 'MacBook Pro 16" M4 Max (2024)':'A3186',
+  'MacBook Pro 16" M5 Pro (2026)':'A3428', 'MacBook Pro 16" M5 Max (2026)':'A3429',
+  'iMac 24" M1 (2021)':'A2438 / A2439', 'iMac 24" M3 (2023)':'A2873 / A2874', 'iMac 24" M4 (2024)':'A3137 / A3247'
+};
+const macA = m => MAC_A[m] || "";
 function modelsFor(cat){
   const seen = []; D.rows.forEach(r => { if (r.cat === cat && !seen.includes(r.model)) seen.push(r.model); });
   return cat === "mac" ? seen : seen.reverse();   // newest first (Mac tab is already newest-first, grouped Air / Pro / iMac)
@@ -352,8 +375,8 @@ function modelsFor(cat){
 function drawModels(){
   const q = $("q").value.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const el = $("models"); el.innerHTML = "";
-  modelsFor(S.cat).filter(m => q.every(w => m.toLowerCase().includes(w))).forEach(m => {
-    el.append(chip(m, "", S.model === m, () => { Object.assign(S, {model:m, storage:null, opt:null, cond:null, back:false, battery:false, faceid:false}); drawModels(); autoPick(); drawRest(); }));
+  modelsFor(S.cat).filter(m => { const hay = (m + " " + macA(m)).toLowerCase(); return q.every(w => hay.includes(w)); }).forEach(m => {
+    el.append(chip(m, S.cat === "mac" ? macA(m) : "", S.model === m, () => { Object.assign(S, {model:m, storage:null, opt:null, cond:null, back:false, battery:false, faceid:false}); drawModels(); autoPick(); drawRest(); }));
   });
   if (!el.children.length) el.innerHTML = `<span class="fresh">No match on the sheet. Try fewer words, or use “Something else” for a live Swappa appraisal.</span>`;
   $("s-model").classList.remove("off");
@@ -474,7 +497,7 @@ function drawConds(){
   f.innerHTML = `<label for="parts">Other repairs, part cost</label><div class="money"><span>−$</span><input id="parts" inputmode="numeric" value="${S.parts || ""}" placeholder="0"></div><span class="hint">${esc(hint)}</span>`;
   de.append(f);
   f.querySelector("input").addEventListener("input", e => { S.parts = Math.max(0, parseFloat(e.target.value.replace(/[^\d.]/g,"")) || 0); drawSlip(); });
-  if (r.note){ nt.hidden = false; nt.innerHTML = `<b>${S.cat === "mac" ? "Match it on the Mac:" : "Sheet note:"}</b> ${esc(r.note.replace(/\s*---\s*/g, " · "))}`; }
+  if (r.note || (S.cat === "mac" && macA(S.model))){ nt.hidden = false; const a = S.cat === "mac" && macA(S.model) ? `<b>Model ${esc(macA(S.model))}</b> on the bottom case · ` : ""; nt.innerHTML = a + (r.note ? `<b>${S.cat === "mac" ? "Match it on the Mac:" : "Sheet note:"}</b> ${esc(r.note.replace(/\s*---\s*/g, " · "))}` : ""); }
 }
 function check(id, label, amt, on, cb){
   const l = document.createElement("label"); l.className = "check";
