@@ -121,10 +121,10 @@ header.top .fresh b{color:var(--head-ink)}
 .scale h3,.facts h3,.msg h3{font-family:var(--display);font-stretch:110%;font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
 .lineH{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .lineH small{font-size:12px;color:var(--muted)}
-.oline{position:relative;height:88px;margin:6px 14px 0}
-.oline .track{position:absolute;left:0;right:0;top:34px;height:10px;border-radius:5px;display:flex;overflow:hidden}
+.oline{position:relative;height:104px;margin:6px 14px 0}
+.oline .track{position:absolute;left:0;right:0;top:50px;height:10px;border-radius:5px;display:flex;overflow:hidden}
 .oline .track i{display:block;height:100%}
-.stop{position:absolute;top:0;transform:translateX(-50%);text-align:center;width:76px}
+.stop{position:absolute;top:16px;transform:translateX(-50%);text-align:center;width:76px}
 .stop .nm{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--tc);white-space:nowrap}
 .stop .dot{width:18px;height:18px;border-radius:50%;background:var(--tc);border:3px solid var(--panel);box-shadow:0 0 0 1px var(--tc);margin:6px auto 0}
 .stop .vl{font-family:var(--mono);font-weight:700;font-size:13.5px;margin-top:4px;font-variant-numeric:tabular-nums}
@@ -186,9 +186,11 @@ textarea{width:100%;min-height:110px;font:13px var(--mono);padding:10px 12px;bor
 .posform .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .posform .send{background:#137a43;border-color:#137a43;color:#fff;font-size:16px;padding:12px 18px}
 .posform .send:disabled{opacity:.45;cursor:not-allowed}
-.stop.you{top:29px;z-index:2}.stop.you .dot{width:20px;height:20px;margin:0 auto;background:#fff;border:3px solid #0b2a1a;box-shadow:0 0 0 2px #fff}
-.stop.you .nm{color:#0b2a1a;margin-top:24px;font-size:10px}
-.stop.you.over .dot{border-color:var(--bad)}.stop.you.over .nm{color:var(--bad)}
+.stop.you{top:0;z-index:3;--yc:#1d4ed8}.stop.you.over{--yc:#c62828}
+.stop.you .tag{display:inline-block;font-size:10.5px;font-weight:900;letter-spacing:.08em;padding:2px 7px;border-radius:999px;background:var(--yc);color:#fff;line-height:12px}
+.stop.you .pin{width:2px;height:26px;background:var(--yc);margin:0 auto}
+.stop.you .dot{width:20px;height:20px;margin:3px auto 0;background:var(--yc);border:3px solid #fff;box-shadow:0 0 0 2px var(--yc)}
+.stop.you .vl{color:var(--yc);margin-top:3px}
 </style>
 </head>
 <body>
@@ -794,9 +796,9 @@ function posBuy(a){
     where.className = "where";
     if (paid == null){ send.disabled = true; send.textContent = "Send to POS"; where.textContent = `Max is ${usd(max)}. Start at ${usd(T[2].v)} and only move right if you have to.`; return; }
     const over = paid > max + 0.001;
-    const pct = Math.max(0, Math.min(100, (paid - lo) / span * 100));
+    const pct = over ? 101.5 : Math.max(0, Math.min(100, (paid - lo) / span * 100));   // over max sits just past the end of the line
     if (line){ const st = document.createElement("div"); st.className = "stop you" + (over ? " over" : ""); st.style.left = pct + "%";
-      st.innerHTML = `<div class="dot"></div><div class="nm">You · ${usd(paid)}</div>`; line.append(st); }
+      st.innerHTML = `<div class="tag">YOU</div><div class="pin"></div><div class="dot"></div><div class="vl">${usd(paid)}</div>`; line.append(st); }
     let msg;
     if (over) msg = `${usd(paid - max)} OVER max. Never go above ${usd(max)} — the POS will ask for a manager PIN.`;
     else if (paid >= max) msg = `At max. That's the ceiling.`;
