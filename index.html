@@ -175,6 +175,8 @@ textarea{width:100%;min-height:110px;font:13px var(--mono);padding:10px 12px;bor
 .gate-card p{margin:0;color:var(--muted)}
 .gate-card input{font:16px var(--mono);padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--chip);color:var(--ink)}
 .gate-msg{min-height:1.2em;color:var(--bad);font-size:13px}
+.posbuy{display:block;width:100%;margin:0 0 14px;padding:14px;font-size:17px;border-radius:10px;background:#137a43;border-color:#137a43;color:#fff}
+.posbuy small{display:block;font-weight:400;font-size:12px;opacity:.9;margin-top:2px}
 </style>
 </head>
 <body>
@@ -291,6 +293,7 @@ const store = {get(k){try{return localStorage.getItem(k)}catch(e){return null}},
 
 /* ---------- data ---------- */
 const PASS_KEY = "cz-pass";
+const EMBED = window.parent !== window && /[?&]pos=1/.test(location.search);
 const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 async function unlock(pw){
   const enc = await (await fetch("data.enc.json", {cache: "no-store"})).json();
@@ -603,6 +606,10 @@ function drawSlip(){
   h += scale(r, o) + facts(r, o, hot) + message(o.max) + checklist(r);
   el.innerHTML = h;
   wireCopy(o.max);
+  if (EMBED) posBuy({cat: S.cat, model: r.model, storage: r.storage === "-" ? "" : r.storage, carrierRaw: r.carrier, carrier: optLabel, cond: o.cond,
+    condLabel: (COND.find(c => c.k === o.cond) || {}).l || o.cond, max: o.max, start: o.start, swappa: o.swappa ? o.swappa.v : null,
+    atlas: num(r.atlas) ? r.atlas : null, retail: num(r.retail) ? r.retail : null, lines: o.lines, track: r.track || "",
+    repairs: {screen: S.screen, back: S.back, battery: S.battery, faceid: S.faceid, parts: S.parts}});
 }
 function emptySlip(){
   $("slip").innerHTML = `<div class="empty"><b>${S.model ? "Finish the details" : "Pick a device"}</b>${S.model ? "Choose storage and carrier to see the offer." : "Max buy, opening offer, Atlas, Swappa, retail and stock show up here."}</div>`;
@@ -752,6 +759,20 @@ function swCompute(){
   h += `<div class="checklist"><b>Before you pay:</b> account removed / Find My off · IMEI clean · paid off · test screen, buttons, charging. Thin market or over $500? Text Sam the numbers first.</div>`;
   el.innerHTML = h;
   wireCopy();
+  if (EMBED && !low) posBuy({cat: "other", model: name, storage: "", carrierRaw: "", carrier: "", cond: "used", condLabel: "Swappa appraisal", max, start,
+    swappa: Math.round(list), atlas: null, retail: null, lines: [["Swappa price", Math.round(list)]], track: "swappa", repairs: {}});
+}
+/* ---------- inside the POS: "Buy it" hands this appraisal to the POS buyback ---------- */
+function posBuy(a){
+  const el = $("slip"); if (!el || a.max == null) return;
+  const b = document.createElement("button"); b.type = "button"; b.className = "btn posbuy";
+  b.innerHTML = `Buy it · max ${usd(a.max)}<small>Next: test it, seller info and pay, in the POS</small>`;
+  b.onclick = () => parent.postMessage({type: "cz-appraisal", appraisal: a}, location.origin);
+  el.prepend(b);
+}
+if (EMBED){
+  const send = () => parent.postMessage({type: "cz-height", h: document.documentElement.scrollHeight}, location.origin);
+  new ResizeObserver(send).observe(document.body); addEventListener("load", send);
 }
 })();
 </script>
