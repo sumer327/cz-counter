@@ -177,6 +177,14 @@ textarea{width:100%;min-height:110px;font:13px var(--mono);padding:10px 12px;bor
 .gate-msg{min-height:1.2em;color:var(--bad);font-size:13px}
 .posbuy{display:block;width:100%;margin:0 0 14px;padding:14px;font-size:17px;border-radius:10px;background:#137a43;border-color:#137a43;color:#fff}
 .posbuy small{display:block;font-weight:400;font-size:12px;opacity:.9;margin-top:2px}
+.paidbox{margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:12px}
+.paidbox label{display:flex;align-items:center;gap:10px;font-weight:700}
+.paidbox input{width:120px;font:inherit;font-size:18px;font-weight:700;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink)}
+.profit{display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin-top:10px;font-size:14px}
+.profit .v{font-family:var(--mono);font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.profit .good{color:var(--t1)} .profit .bad{color:var(--over)}
+.profit .sub{grid-column:1/-1;font-size:12px;color:var(--muted);margin-top:4px}
+.stop.paid .nm{color:var(--ink)} .stop.paid .dot{background:var(--ink);box-shadow:0 0 0 1px var(--ink);border-radius:3px}
 </style>
 </head>
 <body>
@@ -269,7 +277,7 @@ const CATS = [
   {id:"watch", label:"Apple Watch"}, {id:"pixel", label:"Pixel"}, {id:"console", label:"Console / handheld"},
   {id:"surface", label:"Surface Pro"}, {id:"mac", label:"MacBook / iMac"}, {id:"other", label:"Something else", sub:"not on the sheet"}
 ];
-const CAP55 = 0.55;          // used ONLY by the off-sheet "Something else" Swappa appraisal; sheet devices mirror the sheet (Nov 11)
+const CAP55 = 0.55;          // Samsung flagships + all iPads: max buy capped at 55% of Swappa list
 const BATTERY = 35;          // battery health under 80% (non-iPhone, when the sheet header does not say)
 const BATTERY_IPHONE = 30;   // iPhones: $30 across the board (Sam, Nov 10)
 const battFor = r => { const m = /BATTER\w*\s*-\s*\$(\d+)/i.exec(r?.note || ""); return m ? +m[1] : (r && r.cat === "iphone" ? BATTERY_IPHONE : BATTERY); };   // sheet header ("BAD BATTERY - $30") wins
@@ -568,8 +576,13 @@ function compute(r){
   if (S.parts){ max -= S.parts; out.lines.push(["Part cost", -S.parts]); }
   }
   const sw = swappaFor(r);
-  // Nov 11 (Sam): the tool MIRRORS the Master Buyback Sheet. No price rules of its own on sheet devices —
-  // the 55% Samsung-flagship / iPad cap now has to live in the sheet's USED column, not here.
+  if (capApplies(r) && sw && ["new","mint","used","heavy"].includes(out.cond)){
+    const cap = floor5(sw.v * CAP55);
+    if (max > cap){
+      out.alerts.push(["warn", `<b>55% cap applied.</b> ${r.cat === "ipad" ? "iPads" : "Samsung flagships"} lose value fast, so we pay no more than 55% of the Swappa list (${usd(sw.v)}). The sheet's number was ${usd(max)}.`]);
+      out.lines.push(["55% cap", cap - max]); max = cap;
+    }
+  }
   max = Math.max(0, max);
   out.max = max;
   out.start = max >= 20 ? Math.min(max, ceil5(max * 0.9)) : max;
@@ -599,13 +612,13 @@ function drawSlip(){
     h += `<div class="alert bad"><b>${esc(o.text)}.</b> ${/PASS/i.test(o.text) ? "We don't buy this one in that condition." : "The sheet has no number here. Ask Sam before quoting."}</div>`;
     el.innerHTML = h + facts(r, o, hot); return;
   }
-  h += tierCards(o.max);
+  h += tierCards(o.max) + paidBox(r, o, [S.cat, S.model, S.storage, S.opt].join("|"));
   if (o.lines.length > 1) h += `<div class="math">${o.lines.map(([k,v]) => `${esc(k)} <span class="${v < 0 ? "neg" : ""}">${v < 0 ? "−" + usd(-v) : usd(v)}</span>`).join(" · ")} = <b>${usd(o.max)}</b></div>`;
   o.alerts.forEach(([t, m]) => h += `<div class="alert ${t}">${m}</div>`);
   if (o.max === 0) h += `<div class="alert bad"><b>Deductions wipe out the value.</b> Offer a few dollars for parts or pass.</div>`;
-  h += scale(r, o) + facts(r, o, hot) + message(o.max) + checklist(r);
+  h += `<div id="scaleBox">${scale(r, o)}</div>` + facts(r, o, hot) + message(o.max) + checklist(r);
   el.innerHTML = h;
-  wireCopy(o.max);
+  wireCopy(o.max); wirePaid(r, o);
   if (EMBED) posBuy({cat: S.cat, model: r.model, storage: r.storage === "-" ? "" : r.storage, carrierRaw: r.carrier, carrier: optLabel, cond: o.cond,
     condLabel: (COND.find(c => c.k === o.cond) || {}).l || o.cond, max: o.max, start: o.start, swappa: o.swappa ? o.swappa.v : null,
     atlas: num(r.atlas) ? r.atlas : null, retail: num(r.retail) ? r.retail : null, lines: o.lines, track: r.track || "",
@@ -626,11 +639,16 @@ function scale(r, o){
   // offer line: stops spaced by their % under max (home run left, max right)
   const lo = T[0].v, span = Math.max(1, o.max - lo);
   const at = v => o.max === lo ? 50 : (v - lo) / span * 100;
+  const pd = o.paid > 0 ? o.paid : null;
   let off = `<div class="oline" role="img" aria-label="Offer line from home run to max">
     <div class="track">${T.slice(0, -1).map((t, i) => `<i style="flex-basis:${at(T[i+1].v) - at(t.v)}%;background:${t.c}"></i>`).join("")}</div>
-    ${T.map(t => `<div class="stop" style="left:${at(t.v)}%;--tc:${t.c}"><div class="nm">${esc(t.k)}</div><div class="dot"></div><div class="vl">${usd(t.v)}</div></div>`).join("")}</div>`;
+    ${T.map(t => `<div class="stop" style="left:${at(t.v)}%;--tc:${t.c}${pd != null ? ";opacity:.45" : ""}"><div class="nm">${esc(t.k)}</div><div class="dot"></div><div class="vl">${usd(t.v)}</div></div>`).join("")}
+    ${pd != null && pd >= lo && pd <= o.max ? `<div class="stop paid" style="left:${at(pd)}%"><div class="nm">Paying</div><div class="dot"></div><div class="vl">${usd(pd)}</div></div>` : ""}</div>
+    ${pd != null && pd < lo ? `<div class="math" style="color:var(--t1)"><b>Paying ${usd(pd)}: below the home run price.</b> Great buy.</div>` : ""}
+    ${pd != null && pd > o.max ? `<div class="math" style="color:var(--over)"><b>Paying ${usd(pd)}: ${usd(pd - o.max)} over max.</b> Needs a manager.</div>` : ""}`;
   // market line: where max buy sits against what the device is worth
   const ref = [{k:"Max buy", v:o.max, c:"var(--t4)"}];
+  if (pd != null) ref.push({k:"We pay", v:pd, c:"var(--ink)"});
   if (o.swappa) ref.push({k:o.swappa.src, v:o.swappa.v, c:"var(--ref-swappa)"});
   // Atlas pin matches the condition: New/sealed sells to Atlas as new, everything else as Grade B
   const exitTag = r.track === "financed" ? " (our exit)" : "";
@@ -651,6 +669,30 @@ function scale(r, o){
       <div class="legend">${[...ref].sort((a,b) => b.v - a.v).map(p => `<span><i style="background:${p.c}"></i>${esc(p.k)} <b>${usd(p.v)}</b></span>`).join("")}</div>`;
   }
   return `<div class="scale"><div class="lineH"><h3>Offer line</h3><small>start low, move right only if you must</small></div>${off}${mk}</div>`;
+}
+/* "What we're paying": shows where it lands and the profit at each exit */
+function shipFor(cat, v){ const id = ["iphone","samsung","pixel"].includes(cat) ? "phone" : cat === "watch" ? "watch" : cat === "other" ? S.box : "tab"; return (BOX.find(b => b.id === id) || BOX[0]).ship(v); }
+function profitHtml(r, o){
+  const pd = o.paid; if (!(pd > 0)) return `<div class="sub">Type what you're paying to see the profit at each exit.</div>`;
+  const rows = [];
+  if (o.swappa){ const sh = shipFor(o.cat || S.cat, o.swappa.v), net = o.swappa.v * 0.884375 - sh; rows.push(["Sell on Swappa", net - pd, `${usd(o.swappa.v)} list − 11.6% fees − ${usd(sh)} shipping`]); }
+  const atl = o.cond === "new" && num(r.atlasNew) ? r.atlasNew : num(r.atlas);
+  if (atl != null) rows.push([`Sell to Atlas${o.cond === "new" && num(r.atlasNew) ? " (new sealed)" : " (Grade B)"}`, atl - pd, `Atlas pays ${usd(atl)}`]);
+  if (num(r.retail)) rows.push(["Sell in store", r.retail - pd, `our retail ${usd(r.retail)}`]);
+  const vsMax = o.max - pd;
+  return `<div class="profit">${rows.map(([k, v, d]) => `<span>${esc(k)} <small style="color:var(--muted)">· ${esc(d)}</small></span><span class="v ${v >= 0 ? "good" : "bad"}">${v >= 0 ? "+" : "−"}${usd(Math.abs(v))}</span>`).join("")}
+    <span class="sub">${vsMax >= 0 ? `${usd(vsMax)} under max buy.` : `<b style="color:var(--over)">${usd(-vsMax)} over max buy.</b> A manager has to approve this.`}${rows.length ? " Profit before any repairs it still needs." : ""}</span></div>`;
+}
+function paidBox(r, o, key){
+  if (S.paidKey !== key){ S.paidKey = key; S.paid = null; }
+  o.paid = S.paid;
+  return `<div class="paidbox"><label for="paidIn">We're paying $ <input id="paidIn" inputmode="decimal" autocomplete="off" placeholder="${o.start || o.max}" value="${S.paid != null ? S.paid : ""}"></label><div id="paidOut">${profitHtml(r, o)}</div></div>`;
+}
+function wirePaid(r, o){
+  const inp = $("paidIn"); if (!inp) return;
+  inp.oninput = () => { const v = parseFloat(inp.value.replace(/[$,]/g, "")); S.paid = v > 0 ? Math.round(v * 100) / 100 : null; o.paid = S.paid;
+    $("paidOut").innerHTML = profitHtml(r, o); const sb = $("scaleBox"); if (sb) sb.innerHTML = scale(r, o);
+    const b = document.querySelector(".posbuy"); if (b) b.dataset.paid = S.paid || ""; };
 }
 function facts(r, o, hot){
   const rows = [];
@@ -743,22 +785,23 @@ function swCompute(){
   const low = max <= 0;
   max = Math.max(0, max);
   const start = max >= 20 ? Math.min(max, ceil5(max * 0.9)) : max;
+  const SWO = {max, start, swappa:{v:list, src:"Swappa price"}, cat:"other", cond:"used"};
   let h = `<div class="dev">${esc(name)}</div><div class="devsub">Live Swappa appraisal · ${n} listings${SW.sold ? ` · sold avg ${usd(SW.sold)}` : ""}</div>
     <div class="tags"><span class="tag">Not on the sheet</span>${n && n < 5 ? `<span class="tag">Thin market</span>` : ""}${low ? `<span class="tag bad">Low value</span>` : ""}</div>`;
   if (low){
     h += `<div class="alert bad"><b>Can't make the ${usd(profit)} minimum on Swappa.</b> Only buy cheap to sell in store, and run it by Sam.</div>`;
   } else {
-    h += tierCards(max);
+    h += tierCards(max) + paidBox({}, SWO, "sw|" + name + "|" + list);
   }
   h += `<div class="math">Swappa price ${usd(list)} (${esc(how)}) × 0.884375 fees = ${usd(net)} − ${usd(ship)} shipping − ${usd(profit)} profit = <b>${usd(Math.max(0, floor5(net - ship - profit)))}</b></div>`;
   alerts.forEach(a => h += `<div class="alert warn">${a}</div>`);
   if (!low){
-    h += scale({}, {max, start, swappa:{v:list, src:"Swappa price"}});
+    h += `<div id="scaleBox">${scale({}, SWO)}</div>`;
     h += message(max);
   }
   h += `<div class="checklist"><b>Before you pay:</b> account removed / Find My off · IMEI clean · paid off · test screen, buttons, charging. Thin market or over $500? Text Sam the numbers first.</div>`;
   el.innerHTML = h;
-  wireCopy();
+  wireCopy(); if (!low) wirePaid({}, SWO);
   if (EMBED && !low) posBuy({cat: "other", model: name, storage: "", carrierRaw: "", carrier: "", cond: "used", condLabel: "Swappa appraisal", max, start,
     swappa: Math.round(list), atlas: null, retail: null, lines: [["Swappa price", Math.round(list)]], track: "swappa", repairs: {}});
 }
@@ -767,7 +810,7 @@ function posBuy(a){
   const el = $("slip"); if (!el || a.max == null) return;
   const b = document.createElement("button"); b.type = "button"; b.className = "btn posbuy";
   b.innerHTML = `Buy it · max ${usd(a.max)}<small>Next: test it, seller info and pay, in the POS</small>`;
-  b.onclick = () => parent.postMessage({type: "cz-appraisal", appraisal: a}, location.origin);
+  b.onclick = () => parent.postMessage({type: "cz-appraisal", appraisal: {...a, paid: S.paid || null}}, location.origin);
   el.prepend(b);
 }
 if (EMBED){
