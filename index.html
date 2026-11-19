@@ -744,7 +744,11 @@ function swCompute(){
   else if (band != null){ list = band; how = `listing band (${n < 20 ? "2 cheapest" : n < 40 ? "ranks 1–4" : "ranks 5–8"})`; }
   else if (SW.sold){ list = SW.sold * 0.95; how = "sold average × 0.95 (no clean listings)"; }
   const el = $("slip");
-  if (list == null){ el.innerHTML = `<div class="empty"><b>Live Swappa appraisal</b>Type the Swappa listing prices to get a max buy.</div>`; return; }
+  const nm = $("swName").value.trim();
+  const noMax = {cat: "other", model: nm || "Device", storage: "", carrierRaw: "", carrier: "", cond: "used", condLabel: "Off-sheet (no Swappa max)", max: 0, start: 0, noMax: true,
+    swappa: null, atlas: null, retail: null, lines: [], track: "swappa", repairs: {}};
+  if (list == null){ el.innerHTML = `<div class="empty"><b>Live Swappa appraisal</b>Type the Swappa listing prices to get a max buy.${nm ? ' Or, for a cheap phone you\'ll sell in store, tap <b>Buy it</b> and a manager approves the price.' : ' Type the device name first.'}</div>`;
+    if (EMBED && nm) posBuy(noMax); return; }
   const box = BOX.find(b => b.id === S.box);
   const ship = box.ship(list);
   const profit = list <= 200 ? 60 : 100;
@@ -773,6 +777,7 @@ function swCompute(){
   h += `<div class="checklist"><b>Before you pay:</b> account removed / Find My off · IMEI clean · paid off · test screen, buttons, charging. Thin market or over $500? Text Sam the numbers first.</div>`;
   el.innerHTML = h;
   wireCopy();
+  if (EMBED && low) posBuy({...noMax, model: name, condLabel: "Swappa appraisal · low value", swappa: Math.round(list), lines: [["Swappa price", Math.round(list)]]});
   if (EMBED && !low) posBuy({cat: "other", model: name, storage: "", carrierRaw: "", carrier: "", cond: "used", condLabel: "Swappa appraisal", max, start,
     swappa: Math.round(list), atlas: null, retail: null, lines: [["Swappa price", Math.round(list)]], track: "swappa", repairs: {}});
 }
@@ -782,17 +787,19 @@ function posBuy(a){
   const max = a.max, T = tierVals(max), lo = T[0].v, span = Math.max(1, max - lo);
   const wrap = document.createElement("div"); wrap.className = "posbuy-wrap";
   const b = document.createElement("button"); b.type = "button"; b.className = "btn posbuy";
-  b.innerHTML = `Buy it<small>Put in what you're paying, then send it to the POS to test it, add the seller and pay</small>`;
+  b.innerHTML = a.noMax ? `Buy it anyway<small>No Swappa max. A manager approves the price in the POS</small>` : `Buy it<small>Put in what you're paying, then send it to the POS to test it, add the seller and pay</small>`;
   const f = document.createElement("div"); f.className = "posform"; f.hidden = true;
   f.innerHTML = `<div class="lbl">What are we paying?</div>
-    <div class="row"><div class="money"><span>$</span><input id="posPaid" inputmode="numeric" autocomplete="off" placeholder="${Math.round(T[0].v)}–${Math.round(max)}" aria-label="Price we are paying"></div>
+    <div class="row"><div class="money"><span>$</span><input id="posPaid" inputmode="numeric" autocomplete="off" placeholder="${a.noMax ? 'agreed price' : Math.round(T[0].v) + '–' + Math.round(max)}" aria-label="Price we are paying"></div>
       <button class="btn send" id="posSend" type="button" disabled>Send to POS</button></div>
     <div class="where" id="posWhere">Max is ${usd(max)}. Start at ${usd(T[2].v)} and only move right if you have to.</div>`;
   wrap.append(b, f); el.prepend(wrap);
   const inp = f.querySelector("#posPaid"), send = f.querySelector("#posSend"), where = f.querySelector("#posWhere");
   const paidVal = () => { const v = parseFloat((inp.value || "").replace(/[^\d.]/g, "")); return v > 0 ? v : null; };
   const place = () => {
-    const paid = paidVal(); const line = el.querySelector(".oline"); line && line.querySelectorAll(".stop.you").forEach(x => x.remove());
+    const paid = paidVal();
+    if (a.noMax){ where.className = "where"; if (paid == null){ send.disabled = true; send.textContent = "Send to POS"; where.textContent = "No Swappa max for this one. Type what you agreed to pay: the POS asks a manager to approve it."; return; }
+      where.textContent = `${usd(paid)}: a manager approves it with their PIN when you complete the buy.`; where.classList.add("over"); send.disabled = false; send.textContent = `Send to POS · ${usd(paid)}`; return; } const line = el.querySelector(".oline"); line && line.querySelectorAll(".stop.you").forEach(x => x.remove());
     where.className = "where";
     if (paid == null){ send.disabled = true; send.textContent = "Send to POS"; where.textContent = `Max is ${usd(max)}. Start at ${usd(T[2].v)} and only move right if you have to.`; return; }
     const over = paid > max + 0.001;
