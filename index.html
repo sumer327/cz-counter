@@ -293,7 +293,7 @@ function screenDed(r){ if (/SCREEN DAMAGE\s*=\s*DAMAGED/i.test(r.note || "")) re
 const REPAIR_CATS = ["iphone"];   // categories that use cosmetic condition + repair deductions (Nov 10 change); others keep the sheet columns as conditions
 const TIERS = [              // offer line: % under max buy
   {k:"Home run", off:.25, c:"var(--t1)"}, {k:"Strong", off:.15, c:"var(--t2)"},
-  {k:"Start", off:.10, c:"var(--t3)"}, {k:"Max", off:0, c:"var(--t4)"}];
+  {k:"Average", off:.10, c:"var(--t3)"}, {k:"Max", off:0, c:"var(--t4)"}];
 const S = {cat:null, model:null, storage:null, opt:null, cond:null, screen:false, back:false, battery:false, faceid:false, parts:0, box:"phone"};
 let D = null;
 
@@ -632,7 +632,7 @@ function tierVals(max){
   return TIERS.map(t => ({...t, v: t.off ? Math.min(max, ceil5(max * (1 - t.off))) : max}));
 }
 function tierCards(max){
-  const sub = {"Home run":"25% under max","Strong":"15% under max","Start":"10% under: open here","Max":"never go above"};
+  const sub = {"Home run":"25% under max","Strong":"15% under max","Average":"10% under: a typical deal","Max":"above it needs Sam or Josh"};
   return `<div class="tiers">${tierVals(max).map(t => `<div class="tier${t.off ? "" : " max"}" style="--tc:${t.c}"><div class="k">${esc(t.k)}</div><div class="v">${usd(t.v)}</div><div class="s">${sub[t.k]}</div></div>`).join("")}</div>`;
 }
 function scale(r, o){
@@ -664,7 +664,7 @@ function scale(r, o){
         <div class="track"><i style="flex-basis:${pct(o.max)}%;background:var(--zone-go)"></i><i style="flex:1;background:var(--zone-no)"></i></div>${pins}</div>
       <div class="legend">${[...ref].sort((a,b) => b.v - a.v).map(p => `<span><i style="background:${p.c}"></i>${esc(p.k)} <b>${usd(p.v)}</b></span>`).join("")}</div>`;
   }
-  return `<div class="scale"><div class="lineH"><h3>Offer line</h3><small>start low, move right only if you must</small></div>${off}${mk}</div>`;
+  return `<div class="scale"><div class="lineH"><h3>Offer line</h3><small>open at home run, work right only if you must</small></div>${off}${mk}</div>`;
 }
 function facts(r, o, hot){
   const rows = [];
@@ -792,7 +792,7 @@ function posBuy(a){
   f.innerHTML = `<div class="lbl">What are we paying?</div>
     <div class="row"><div class="money"><span>$</span><input id="posPaid" inputmode="numeric" autocomplete="off" placeholder="${a.noMax ? 'agreed price' : Math.round(T[0].v) + '–' + Math.round(max)}" aria-label="Price we are paying"></div>
       <button class="btn send" id="posSend" type="button" disabled>Send to POS</button></div>
-    <div class="where" id="posWhere">Max is ${usd(max)}. Start at ${usd(T[2].v)} and only move right if you have to.</div>`;
+    <div class="where" id="posWhere">Open at ${usd(T[0].v)} and work up. Max is ${usd(max)}: pay it if that's what closes the sale.</div>`;
   wrap.append(b, f); el.prepend(wrap);
   const inp = f.querySelector("#posPaid"), send = f.querySelector("#posSend"), where = f.querySelector("#posWhere");
   const paidVal = () => { const v = parseFloat((inp.value || "").replace(/[^\d.]/g, "")); return v > 0 ? v : null; };
@@ -801,15 +801,15 @@ function posBuy(a){
     if (a.noMax){ where.className = "where"; if (paid == null){ send.disabled = true; send.textContent = "Send to POS"; where.textContent = "No Swappa max for this one. Type what you agreed to pay: the POS asks a manager to approve it."; return; }
       where.textContent = `${usd(paid)}: a manager approves it with their PIN when you complete the buy.`; where.classList.add("over"); send.disabled = false; send.textContent = `Send to POS · ${usd(paid)}`; return; } const line = el.querySelector(".oline"); line && line.querySelectorAll(".stop.you").forEach(x => x.remove());
     where.className = "where";
-    if (paid == null){ send.disabled = true; send.textContent = "Send to POS"; where.textContent = `Max is ${usd(max)}. Start at ${usd(T[2].v)} and only move right if you have to.`; return; }
+    if (paid == null){ send.disabled = true; send.textContent = "Send to POS"; where.textContent = `Open at ${usd(T[0].v)} and work up. Max is ${usd(max)}: pay it if that's what closes the sale.`; return; }
     const over = paid > max + 0.001;
     const pct = over ? 101.5 : Math.max(0, Math.min(100, (paid - lo) / span * 100));   // over max sits just past the end of the line
     if (line){ const st = document.createElement("div"); st.className = "stop you" + (over ? " over" : ""); st.style.left = pct + "%";
       st.innerHTML = `<div class="tag">YOU</div><div class="pin"></div><div class="dot"></div><div class="vl">${usd(paid)}</div>`; line.append(st); }
     let msg;
-    if (over) msg = `${usd(paid - max)} OVER max. Never go above ${usd(max)} — the POS will ask for a manager PIN.`;
+    if (over) msg = `${usd(paid - max)} OVER max. Tie them down first, then get Sam or Josh on the phone. The POS asks for a manager PIN.`;
     else if (paid >= max) msg = `At max. That's the ceiling.`;
-    else if (paid >= T[2].v) msg = `Between Start and Max (${Math.round((1 - paid / max) * 100)}% under). Fine if they pushed back.`;
+    else if (paid >= T[2].v) msg = `Between Average and Max (${Math.round((1 - paid / max) * 100)}% under). Fine if that's what closes it.`;
     else if (paid >= T[1].v) msg = `Strong — ${Math.round((1 - paid / max) * 100)}% under max.`;
     else if (paid >= T[0].v) msg = `Home run — ${Math.round((1 - paid / max) * 100)}% under max.`;
     else msg = `Below home run (${Math.round((1 - paid / max) * 100)}% under). Great buy — double-check the device is what you think it is.`;
